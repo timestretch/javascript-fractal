@@ -1,0 +1,199 @@
+<html>
+<head>
+	<title></title>
+	<style>
+	body {
+		background-color: #000;
+	}
+	#img {
+		border: 1px solid #444;
+	}
+	</style>
+</head>
+<body>
+
+<canvas id="img"></canvas>
+
+<script>
+// 2015-03-22 - Erik Wrenholt
+// Public Domain
+
+Mandelbrot = {
+
+	WIDTH: 512,
+	HEIGHT: 512,
+	
+	SCALE_FACTOR: 4, // how much to scale?
+
+	MAX_ITERATIONS: 128,
+	BAILOUT: 1024,
+
+	SAMPLES_PER_PIXEL: 8,	// Buddhabrot samples. This is after scaling!
+	RADIUS: 4.0,
+	
+	pixelBuffer: null,
+
+	iterationBufferZR: null,
+	iterationBufferZI: null,
+
+	maximumValue: 0,
+
+	iterate: function (xx, yy) {
+	
+		var max_iterations = this.MAX_ITERATIONS;
+		var bailout = this.BAILOUT;
+		
+		var cr = yy;
+		var ci = xx;
+		var zi = 0.0;
+		var zr = 0.0;
+	
+		var i = 0;
+		
+		while (i++ < max_iterations) {
+			var temp = zr * zi;
+			var zr2 = zr * zr;
+			var zi2 = zi * zi;
+			zr = zr2 - zi2 + cr;
+			zi = 2.0 * temp + ci;
+			if (zi2 + zr2 > bailout) {
+				return i;
+			}
+			
+			this.iterationBufferZR[i] = zr;
+			this.iterationBufferZI[i] = zi;
+		}
+		return i;
+	},
+	
+	plotPixels: function(myCanvas) {
+
+		var width = this.WIDTH * this.SCALE_FACTOR;
+		var height = this.HEIGHT * this.SCALE_FACTOR;
+
+		var myContext = myCanvas.getContext("2d");
+		var imageData = myContext.createImageData(width, height);
+		var data = imageData.data;
+
+
+		var rowWidth = width * 4;
+		
+		var max = this.maximumValue;
+		console.log(max);
+				
+		for (var y = 0; y < height; y++) {
+	
+			var yoffset = y * rowWidth;
+	
+			for (var x = 0; x < width; x++) {
+	
+				var offset = yoffset + (x * 4);
+				var bufferOffset = y * width + x
+				var val = this.pixelBuffer[ bufferOffset ]
+				
+				var red = (val / max) * 255 * 2;
+				var green = (val / max) * 255 * 3;
+				var blue = (val / max) * 255 * 5;
+				
+				if (red > 255) red = 255;
+				if (green > 255) green = 255;
+				if (blue > 255) blue = 255;
+				
+				data[offset + 0] = red;			//red
+				data[offset + 1] = green;		//green
+				data[offset + 2] = blue;		//blue
+				data[offset + 3] = 255;			//alpha
+			}
+		}
+
+		myContext.putImageData( imageData, 0, 0 );
+
+	},
+	
+	renderFractal: function (canvasId) {
+
+
+
+		var myCanvas = document.getElementById(canvasId);
+		var width = this.WIDTH * this.SCALE_FACTOR;
+		var height = this.HEIGHT * this.SCALE_FACTOR;
+	
+		myCanvas.width  = width;
+		myCanvas.height = height;
+		myCanvas.style.width  = width / this.SCALE_FACTOR;
+		myCanvas.style.height = height / this.SCALE_FACTOR;
+
+
+		var bufferSize = width * height;
+		var totalSamples = bufferSize * this.SAMPLES_PER_PIXEL;
+
+		this.pixelBuffer = new Uint32Array(bufferSize);
+		
+		for (var i; i < bufferSize; i++) {
+			this.pixelBuffer[i] = 0;
+		}
+		
+		this.iterationBufferZR = new Float32Array(this.MAX_ITERATIONS);
+		this.iterationBufferZI = new Float32Array(this.MAX_ITERATIONS);
+		
+		var myContext = myCanvas.getContext("2d");
+		var imageData = myContext.createImageData(width, height);
+		var data = imageData.data;
+
+		
+		var max_iterations = this.MAX_ITERATIONS;
+		var radius = this.RADIUS;
+		
+		for (var i = 0; i < totalSamples; i++) {
+		
+			var iterations = Mandelbrot.iterate(
+				Math.random() * 4.0 - 2.0, 
+				Math.random() * 4.0 - 2.0)
+			
+			if (iterations < max_iterations) {
+				for (var j = 1; j < iterations; j++) {
+				
+					var zr = this.iterationBufferZR[j]
+					var zi = this.iterationBufferZI[j]
+					
+					var pixelX = (zr / radius) * width + (width / 2.0)
+					var pixelY = (zi / radius) * height + (height / 2.0)
+					
+					if (pixelX < width && pixelX > 0 && pixelY < height && pixelY > 0) {
+						
+						var x = Math.floor(pixelX);
+						var y = Math.floor(pixelY);
+						
+						var bufferOffset = y * width + x
+						
+						var val = this.pixelBuffer[ bufferOffset ] + 1
+						
+						this.pixelBuffer[ bufferOffset ] = val
+						
+						if (val > this.maximumValue) {
+							this.maximumValue = val;
+						}
+						
+					}	// inside buffer
+				}	// plot pixel at each iteration
+			}	// if we are not at max iterations
+		}	// samples
+		
+		this.plotPixels(myCanvas);
+	
+	}
+
+}
+
+
+var t0 = performance.now();
+Mandelbrot.renderFractal("img");
+var t1 = performance.now();
+console.log("Call to render fractal took " + (t1 - t0) + " milliseconds.")
+
+
+
+</script>
+
+</body>
+</html>

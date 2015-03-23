@@ -1,0 +1,114 @@
+<html>
+<head>
+	<title></title>
+	<style>
+	#img {
+		border: 1px solid #eee;
+	}
+	</style>
+</head>
+<body>
+
+<canvas id="img"></canvas>
+
+<script>
+// 2015-03-21 - Erik Wrenholt
+// Public Domain
+
+Mandelbrot = {
+
+	WIDTH: 768,
+	HEIGHT: 768,
+	
+	SCALE_FACTOR: 4,
+
+	ITERATIONS: 1000,
+	BAILOUT: 1024,
+
+	iterate: function (xx, yy) {
+	
+		var iterations = this.ITERATIONS;
+		var bailout = this.BAILOUT;
+		
+		var cr = xx;
+		var ci = yy;
+		var zi = 0.0;
+		var zr = 0.0;
+	
+		var i = 0;
+	
+		while (i++ < iterations) {
+			var temp = zr * zi;
+			var zr2 = zr * zr;
+			var zi2 = zi * zi;
+			zr = zr2 - zi2 + cr;
+			zi = 2.0 * temp + ci;
+			if (zi2 + zr2 > bailout) {
+				return i;
+			}
+		}
+		return i;
+	},
+	
+	renderFractal: function (canvasId) {
+
+		var myCanvas = document.getElementById(canvasId);
+		var width = this.WIDTH * this.SCALE_FACTOR;
+		var height = this.HEIGHT * this.SCALE_FACTOR;
+	
+		myCanvas.width  = width;
+		myCanvas.height = height;
+		myCanvas.style.width  = width / this.SCALE_FACTOR;
+		myCanvas.style.height = height / this.SCALE_FACTOR;
+
+		var myContext = myCanvas.getContext("2d");
+
+		var imageData = myContext.createImageData(width, height);
+		var data = imageData.data;
+
+		var iterations = Mandelbrot.ITERATIONS;
+	
+		var rowWidth = width * 4;
+	
+		for (var y = 0; y < height; y++) {
+	
+			var yoffset = y * rowWidth;
+			var yy = ((y / height) * 4.0 - 2.0);
+	
+			for (var x = 0; x < width; x++) {
+	
+				var offset = yoffset + (x * 4);
+				var xx = (x / width) * 4.0 - 2.0 - 0.5;
+		
+				//var gray = 255 - (Mandelbrot.iterate(xx, yy) / iterations) * 255;
+				
+				var gray = 0;				
+				if (Mandelbrot.iterate(xx, yy) % 2 == 0) {
+					gray = 255;
+				}
+				
+				data[offset + 0] = gray;		//red
+				data[offset + 1] = gray;		//green
+				data[offset + 2] = gray;		//blue
+				data[offset + 3] = 255;			//alpha
+			}
+		}
+
+		myContext.putImageData( imageData, 0, 0 );
+	}
+
+
+}
+
+
+var t0 = performance.now();
+Mandelbrot.renderFractal("img");
+var t1 = performance.now();
+console.log("Call to render fractal took " + (t1 - t0) + " milliseconds.")
+
+
+
+</script>
+
+</body>
+</html>
