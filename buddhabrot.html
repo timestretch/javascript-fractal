@@ -20,15 +20,15 @@
 
 Mandelbrot = {
 
-	WIDTH: 512,
-	HEIGHT: 512,
+	WIDTH: 1024,
+	HEIGHT: 1024,
 	
 	SCALE_FACTOR: 4, // how much to scale?
 
-	MAX_ITERATIONS: 128,
+	MAX_ITERATIONS: 1024,
 	BAILOUT: 1024,
 
-	SAMPLES_PER_PIXEL: 8,	// Buddhabrot samples. This is after scaling!
+	SAMPLES_PER_PIXEL: 4,	// Buddhabrot samples. This is after scaling!
 	RADIUS: 4.0,
 	
 	pixelBuffer: null,
@@ -146,9 +146,18 @@ Mandelbrot = {
 		
 		for (var i = 0; i < totalSamples; i++) {
 		
-			var iterations = Mandelbrot.iterate(
-				Math.random() * 4.0 - 2.0, 
-				Math.random() * 4.0 - 2.0)
+			var a;
+			var b;
+		
+			//do {
+				a = Math.random() * 4.0 - 2.0;
+			//} while (Math.floor(a * 40) % 2 != 0);
+			
+			do {
+				b = Math.random() * 4.0 - 2.0;
+			} while (Math.floor(b * 40) % 2 != 0);
+			
+			var iterations = Mandelbrot.iterate(a, b);
 			
 			if (iterations < max_iterations) {
 				for (var j = 1; j < iterations; j++) {
