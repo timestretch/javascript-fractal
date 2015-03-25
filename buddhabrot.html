@@ -300,15 +300,11 @@ var Mandelbrot = {
 Mandelbrot.init("img");
 Mandelbrot.start();
 
-document.getElementById("red").addEventListener("input", function() {
-	Mandelbrot.refresh();
-}, false);
-document.getElementById("green").addEventListener("input", function() {
-	Mandelbrot.refresh();
-}, false);
-document.getElementById("blue").addEventListener("input", function() {
-	Mandelbrot.refresh();
-}, false);
+["red", "green", "blue"].map(function(channel) {
+	document.getElementById(channel).addEventListener("input", function() {
+		Mandelbrot.refresh();
+	}, false);
+});
 
 //var t0 = performance.now();
 //var t1 = performance.now();
