@@ -4,9 +4,20 @@
 	<style>
 	body {
 		background-color: #000;
+		font-family: Verdana;
 	}
 	#img {
 		border: 1px solid #444;
+		float: left;
+	}
+	#form {
+		width: 256px;
+		float: left;
+		color: white;
+		padding: 16px;
+	}
+	#form input {
+		width: 256px;
 	}
 	</style>
 </head>
@@ -14,29 +25,102 @@
 
 <canvas id="img"></canvas>
 
+<form id="form">
+	<p>Red<br>
+	<input type="range" id="red" min="0" max="1000" value="100"></p>
+	
+	<p>Green<br>
+	<input type="range" id="green" min="0" max="1000" value="100"></p>
+	
+	<p>Blue<br>
+	<input type="range" id="blue" min="0" max="1000" value="100"></p>
+	
+	<p id="status"></p>
+</form>
+
 <script>
 // 2015-03-22 - Erik Wrenholt
 // Public Domain
 
-Mandelbrot = {
+var Channel =  function(width, height, radius) {
 
-	WIDTH: 512,
-	HEIGHT: 512,
+	var _maximumValue = 0;
+
+	var _width = width;
+	var _height = height;
+	var _radius = radius;
 	
-	SCALE_FACTOR: 4, // how much to scale?
+	var bufferSize = width * height;
+	
+	var _pixelBuffer = new Float64Array(bufferSize);
+	//var _pixelBuffer = new Uint32Array(bufferSize);
+	
+	for (var i; i < bufferSize; i++) {
+		_pixelBuffer[i] = 0;
+	}
+
+	return {
+		plotPixelArrayWithColor: plotPixelArrayWithColor,
+		pixelBuffer: pixelBuffer,
+		maximumValue: maximumValue
+	};
+
+	function pixelBuffer() {
+		return _pixelBuffer;
+	}
+	
+	function maximumValue() {
+		return _maximumValue;
+	}
+
+	function plotPixelArrayWithColor (arrayOfPointX, arrayOfPointY, iterations, color) {
+		
+		for (var i = 1; i < iterations; i++) {
+			var xx = arrayOfPointX[i];
+			var yy = arrayOfPointY[i];
+
+			var pixelX = (xx / _radius) * _width + (_width / 2.0)
+			var pixelY = (yy / _radius) * _height + (_height / 2.0)
+							
+			if (pixelX < _width && pixelX > 0 && pixelY < _height && pixelY > 0) {
+				
+				var x = Math.floor(pixelX);
+				var y = Math.floor(pixelY);
+				
+				var bufferOffset = y * _width + x;
+				
+				var val = _pixelBuffer[ bufferOffset ] + color;
+				
+				_pixelBuffer[ bufferOffset ] = val;
+				
+				if (val > _maximumValue) {
+					_maximumValue = val;
+				}
+			}
+		}
+	}
+
+}
+
+var Mandelbrot = {
+
+	WIDTH: 256,
+	HEIGHT: 256,
+	
+	SCALE_FACTOR: 1, // how much to scale?
 
 	MAX_ITERATIONS: 128,
 	BAILOUT: 1024,
 
-	SAMPLES_PER_PIXEL: 8,	// Buddhabrot samples. This is after scaling!
+	SAMPLES_PER_PIXEL: 4,	// Buddhabrot samples. This is after scaling!
 	RADIUS: 4.0,
 	
-	pixelBuffer: null,
-
 	iterationBufferZR: null,
 	iterationBufferZI: null,
 
 	maximumValue: 0,
+
+	canvas: undefined,
 
 	iterate: function (xx, yy) {
 	
@@ -66,21 +150,32 @@ Mandelbrot = {
 		return i;
 	},
 	
-	plotPixels: function(myCanvas) {
+	plotPixels: function() {
 
 		var width = this.WIDTH * this.SCALE_FACTOR;
 		var height = this.HEIGHT * this.SCALE_FACTOR;
 
-		var myContext = myCanvas.getContext("2d");
+		var myContext = this.canvas.getContext("2d");
 		var imageData = myContext.createImageData(width, height);
 		var data = imageData.data;
 
-
 		var rowWidth = width * 4;
 		
-		var max = this.maximumValue;
-		console.log(max);
-				
+		var redPixelBuffer = this.red.pixelBuffer();
+		var redMax = this.red.maximumValue();
+
+		var greenPixelBuffer = this.green.pixelBuffer();
+		var greenMax = this.green.maximumValue();
+
+		var bluePixelBuffer = this.blue.pixelBuffer();
+		var blueMax = this.blue.maximumValue();
+		
+		//console.log(redMax + " " + greenMax + " " + blueMax);
+		
+		var redSliderValue = document.getElementById("red").value / 100.0;
+		var greenSliderValue = document.getElementById("green").value / 100.0;
+		var blueSliderValue = document.getElementById("blue").value / 100.0;
+		
 		for (var y = 0; y < height; y++) {
 	
 			var yoffset = y * rowWidth;
@@ -89,11 +184,10 @@ Mandelbrot = {
 	
 				var offset = yoffset + (x * 4);
 				var bufferOffset = y * width + x
-				var val = this.pixelBuffer[ bufferOffset ]
 				
-				var red = (val / max) * 255 * 2;
-				var green = (val / max) * 255 * 3;
-				var blue = (val / max) * 255 * 5;
+				var red = (redPixelBuffer[ bufferOffset ] / redMax) * 255 * redSliderValue;
+				var green = (greenPixelBuffer[ bufferOffset ] / greenMax) * 255 * greenSliderValue;
+				var blue = (bluePixelBuffer[ bufferOffset ] / blueMax) * 255 * blueSliderValue;
 				
 				if (red > 255) red = 255;
 				if (green > 255) green = 255;
@@ -110,39 +204,33 @@ Mandelbrot = {
 
 	},
 	
-	renderFractal: function (canvasId) {
-
-
-
-		var myCanvas = document.getElementById(canvasId);
+	init: function(canvasId) {
+		this.canvas = document.getElementById(canvasId);
 		var width = this.WIDTH * this.SCALE_FACTOR;
 		var height = this.HEIGHT * this.SCALE_FACTOR;
 	
-		myCanvas.width  = width;
-		myCanvas.height = height;
-		myCanvas.style.width  = width / this.SCALE_FACTOR;
-		myCanvas.style.height = height / this.SCALE_FACTOR;
+		this.canvas.width  = width;
+		this.canvas.height = height;
+		this.canvas.style.width  = width / this.SCALE_FACTOR;
+		this.canvas.style.height = height / this.SCALE_FACTOR;
 
-
-		var bufferSize = width * height;
-		var totalSamples = bufferSize * this.SAMPLES_PER_PIXEL;
-
-		this.pixelBuffer = new Uint32Array(bufferSize);
-		
-		for (var i; i < bufferSize; i++) {
-			this.pixelBuffer[i] = 0;
-		}
-		
+		this.red = Channel(width, height, this.RADIUS);
+		this.green = Channel(width, height, this.RADIUS);
+		this.blue = Channel(width, height, this.RADIUS);
+				
 		this.iterationBufferZR = new Float32Array(this.MAX_ITERATIONS);
 		this.iterationBufferZI = new Float32Array(this.MAX_ITERATIONS);
-		
-		var myContext = myCanvas.getContext("2d");
-		var imageData = myContext.createImageData(width, height);
-		var data = imageData.data;
-
-		
+	},
+	
+	calc: function() {
 		var max_iterations = this.MAX_ITERATIONS;
 		var radius = this.RADIUS;
+
+		var width = this.WIDTH * this.SCALE_FACTOR;
+		var height = this.HEIGHT * this.SCALE_FACTOR;	
+
+		var bufferSize = width * height;
+		var totalSamples = bufferSize;
 		
 		for (var i = 0; i < totalSamples; i++) {
 		
@@ -151,45 +239,80 @@ Mandelbrot = {
 				Math.random() * 4.0 - 2.0)
 			
 			if (iterations < max_iterations) {
-				for (var j = 1; j < iterations; j++) {
 				
-					var zr = this.iterationBufferZR[j]
-					var zi = this.iterationBufferZI[j]
-					
-					var pixelX = (zr / radius) * width + (width / 2.0)
-					var pixelY = (zi / radius) * height + (height / 2.0)
-					
-					if (pixelX < width && pixelX > 0 && pixelY < height && pixelY > 0) {
-						
-						var x = Math.floor(pixelX);
-						var y = Math.floor(pixelY);
-						
-						var bufferOffset = y * width + x
-						
-						var val = this.pixelBuffer[ bufferOffset ] + 1
-						
-						this.pixelBuffer[ bufferOffset ] = val
-						
-						if (val > this.maximumValue) {
-							this.maximumValue = val;
-						}
-						
-					}	// inside buffer
-				}	// plot pixel at each iteration
+				this.red.plotPixelArrayWithColor (
+					this.iterationBufferZR, 
+					this.iterationBufferZI, 
+					iterations, 
+					1.0)	// color
+				
+								
 			}	// if we are not at max iterations
-		}	// samples
+			var iterations = Mandelbrot.iterate(
+				Math.random() * 4.0 - 2.0, 
+				Math.random() * 4.0 - 2.0)
+			
+			if (iterations < max_iterations) {
+				
+				this.green.plotPixelArrayWithColor (
+					this.iterationBufferZR, 
+					this.iterationBufferZI, 
+					iterations, 
+					1.0)	// color
+								
+			}	// if we are not at max iterations
+			var iterations = Mandelbrot.iterate(
+				Math.random() * 4.0 - 2.0, 
+				Math.random() * 4.0 - 2.0)
+			
+			if (iterations < max_iterations) {
+				
+				this.blue.plotPixelArrayWithColor (
+					this.iterationBufferZR, 
+					this.iterationBufferZI, 
+					iterations, 
+					1.0)	// color
+								
+			}	// if we are not at max iterations
+		}	// samples	
+	},
+	refresh: function () {
+		this.plotPixels();
+	},
+	start: function () {
 		
-		this.plotPixels(myCanvas);
+		var _this = this;
+		this.counter = 0;
+		
+		setInterval(function() { 
+			_this.calc();
+			_this.counter += 1;
+			document.getElementById("status").innerHTML = "Samples / Pixel: " + _this.counter;
+			_this.refresh();
+		}, 3000);
+
 	
 	}
 
 }
 
 
-var t0 = performance.now();
-Mandelbrot.renderFractal("img");
-var t1 = performance.now();
-console.log("Call to render fractal took " + (t1 - t0) + " milliseconds.")
+Mandelbrot.init("img");
+Mandelbrot.start();
+
+document.getElementById("red").addEventListener("input", function() {
+	Mandelbrot.refresh();
+}, false);
+document.getElementById("green").addEventListener("input", function() {
+	Mandelbrot.refresh();
+}, false);
+document.getElementById("blue").addEventListener("input", function() {
+	Mandelbrot.refresh();
+}, false);
+
+//var t0 = performance.now();
+//var t1 = performance.now();
+//console.log("Call to render fractal took " + (t1 - t0) + " milliseconds.")
 
 
 
