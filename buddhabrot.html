@@ -39,6 +39,8 @@
 </form>
 
 <script>
+"use strict";
+
 // 2015-03-22 - Erik Wrenholt
 // Public Domain
 
@@ -104,8 +106,8 @@ var Channel =  function(width, height, radius) {
 
 var Mandelbrot = {
 
-	WIDTH: 256,
-	HEIGHT: 256,
+	WIDTH: 1024,
+	HEIGHT: 1024,
 	
 	SCALE_FACTOR: 1, // how much to scale?
 
@@ -234,51 +236,59 @@ var Mandelbrot = {
 		
 		for (var i = 0; i < totalSamples; i++) {
 		
-			var iterations = Mandelbrot.iterate(
-				Math.random() * 4.0 - 2.0, 
-				Math.random() * 4.0 - 2.0)
+			var x = Math.random() * 4.0 - 2.0;
+			var y = Math.random() * 4.0 - 2.0;
+			
+			var iterations = Mandelbrot.iterate(x, y)
+			
 			
 			if (iterations < max_iterations) {
 				
-				this.red.plotPixelArrayWithColor (
-					this.iterationBufferZR, 
-					this.iterationBufferZI, 
-					iterations, 
-					1.0)	// color
 				
-								
-			}	// if we are not at max iterations
-			var iterations = Mandelbrot.iterate(
-				Math.random() * 4.0 - 2.0, 
-				Math.random() * 4.0 - 2.0)
+				//var formula = Math.sqrt(x*x + (y+1.0)*(y+1.0));	// concentric circles around small bulb
+				var formula1 = Math.sqrt(x*x + (y)*(y));	// concentric circles
+				var formula2 = (x*y + 2);	//hyperbolic
+				var formula3 = (y + 2);	//linear
+				var color1 = Math.floor(formula1 * 40) % 3;
+				var color2 = Math.floor(formula2 * 40) % 3;
+				var color3 = Math.floor(formula3 * 40) % 3;
+				
+				var r =   color1 == 0 ? 1.0 : 0;
+				var g = color2 == 1 ? 1.0 : 0;
+				var b =  color3 == 2 ? 1.0 : 0;
+				
+				if (r > 0) {
+					this.red.plotPixelArrayWithColor (
+						this.iterationBufferZR, 
+						this.iterationBufferZI, 
+						iterations, 
+						r);	// color
+				}
 			
-			if (iterations < max_iterations) {
+				if (g > 0) {
+					this.green.plotPixelArrayWithColor (
+						this.iterationBufferZR, 
+						this.iterationBufferZI, 
+						iterations, 
+						g);	// color
+				}
 				
-				this.green.plotPixelArrayWithColor (
-					this.iterationBufferZR, 
-					this.iterationBufferZI, 
-					iterations, 
-					1.0)	// color
-								
-			}	// if we are not at max iterations
-			var iterations = Mandelbrot.iterate(
-				Math.random() * 4.0 - 2.0, 
-				Math.random() * 4.0 - 2.0)
+				if (b > 0) {
+					this.blue.plotPixelArrayWithColor (
+						this.iterationBufferZR, 
+						this.iterationBufferZI, 
+						iterations, 
+						b);	// color
+				}
+			}	
 			
-			if (iterations < max_iterations) {
-				
-				this.blue.plotPixelArrayWithColor (
-					this.iterationBufferZR, 
-					this.iterationBufferZI, 
-					iterations, 
-					1.0)	// color
-								
-			}	// if we are not at max iterations
 		}	// samples	
 	},
+	
 	refresh: function () {
 		this.plotPixels();
 	},
+	
 	start: function () {
 		
 		var _this = this;
